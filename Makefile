@@ -14,4 +14,4 @@ tests:
 	pytest tests/
 
 app:
-	streamlit run app/main_app.py
+	streamlit run app/app.py
