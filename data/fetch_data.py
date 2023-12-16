@@ -37,5 +37,29 @@ def get_current_price(crypto = 'bitcoin', currency = 'usd'):
         print(e)
 
 def get_historical_crypto_data(start_date, end_date, price_col,ticker = "BTC-USD"): 
+    """
+    Get historical cryptocurrency data within a specified date range.
+
+    Parameters:
+    - start_date (str): The start date in 'YYYY-MM-DD' format.
+    - end_date (str): The end date in 'YYYY-MM-DD' format.
+    - price_col (str): The column containing the desired price data.
+    - ticker (str): The cryptocurrency ticker symbol (default is "BTC-USD").
+
+    Returns:
+    - pandas.Series: A pandas Series containing historical price data of the specified cryptocurrency
+      between the specified start and end dates.
+
+    Example:
+    - get_historical_crypto_data('2023-01-01', '2023-12-31', 'Close', 'BTC-USD') returns:
+      Date
+      2023-01-01    47000.0
+      2023-01-02    48000.0
+      ...           ...
+      2023-12-30    60000.0
+      2023-12-31    62000.0
+      Name: Close, Length: 365, dtype: float64
+    """
+    
     bitcoin_data = yf.download(ticker, start=start_date, end=end_date)
     return bitcoin_data[price_col]
