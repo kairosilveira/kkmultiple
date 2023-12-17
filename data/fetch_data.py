@@ -2,6 +2,7 @@ import yfinance as yf
 from requests import Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 import json
+import polars as pl
 
 def get_current_price(crypto = 'bitcoin', currency = 'usd'):
     """
@@ -36,7 +37,8 @@ def get_current_price(crypto = 'bitcoin', currency = 'usd'):
     except (ConnectionError, Timeout, TooManyRedirects) as e:
         print(e)
 
-def get_historical_crypto_data(start_date, end_date, price_col,ticker = "BTC-USD"): 
+
+def get_historical_crypto_data(start_date, end_date, price_col, ticker="BTC-USD"):
     """
     Get historical cryptocurrency data within a specified date range.
 
@@ -47,19 +49,30 @@ def get_historical_crypto_data(start_date, end_date, price_col,ticker = "BTC-USD
     - ticker (str): The cryptocurrency ticker symbol (default is "BTC-USD").
 
     Returns:
-    - pandas.Series: A pandas Series containing historical price data of the specified cryptocurrency
+    - polars.DataFrame: A Polars DataFrame containing historical price data of the specified cryptocurrency
       between the specified start and end dates.
 
     Example:
     - get_historical_crypto_data('2023-01-01', '2023-12-31', 'Close', 'BTC-USD') returns:
-      Date
-      2023-01-01    47000.0
-      2023-01-02    48000.0
-      ...           ...
-      2023-12-30    60000.0
-      2023-12-31    62000.0
-      Name: Close, Length: 365, dtype: float64
+      shape: (365, 2)
+      ┌────────────────┬───────────┐
+      │ Date           │ Close     │
+      │ ───────────────┼───────────┤
+      │ 2023-01-01     │ 47000.0   │
+      │ 2023-01-02     │ 48000.0   │
+      │ ...            │ ...       │
+      │ 2023-12-30     │ 60000.0   │
+      │ 2023-12-31     │ 62000.0   │
+      └────────────────┴───────────┘
     """
     
     bitcoin_data = yf.download(ticker, start=start_date, end=end_date)
-    return bitcoin_data[price_col]
+    
+    # Convert pandas DataFrame to Polars DataFrame
+    polars_df = pl.DataFrame(bitcoin_data.reset_index())
+    
+    # Select the specified columns
+    polars_df = polars_df.select(["Date", price_col])
+    
+    return polars_df
+
