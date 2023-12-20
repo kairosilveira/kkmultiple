@@ -16,3 +16,6 @@ tests:
 
 app:
 	streamlit run app/app.py
+
+format:
+	autopep8 . --recursive --in-place
