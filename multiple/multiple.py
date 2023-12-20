@@ -1,8 +1,12 @@
+from collections import namedtuple
+
+
 class KKMultiple:
-    def __init__(self, days_moving_avg, buy_thresholds, sell_threshold=None) -> None:
+    def __init__(self, days_moving_avg, buy_thresholds, buy_percentages) -> None:
         self.days_moving_avg = days_moving_avg
         self.buy_thresholds = buy_thresholds
-        self.sell_threshold = sell_threshold
+        self.buy_percentages = buy_percentages
+        self.multiple = None
 
     def calculate_avg(self, historical_data):
         """
@@ -29,6 +33,25 @@ class KKMultiple:
         - float: The ratio of the given price to the moving average of historical data.
         """
         moving_avg = self.calculate_avg(historical_data)
-        return price / moving_avg
+        self.multiple = price / moving_avg
+        return self.multiple
 
+    def _find_min_threshold_gt_multiple_index(self):
+        passed_threshholds = [
+            threshold for threshold in self.buy_thresholds if threshold > self.multiple]
+        if passed_threshholds:
+            min_threshold = min(passed_threshholds)
+            index_min_threshold = self.buy_thresholds.index(min_threshold)
+            return index_min_threshold
+        else:
+            return None
 
+    def name(self):
+
+        if not self.multiple:
+            raise ValueError(
+                "Calculate the 'multiple' before accessing the buy name. Use the 'calculate_multiple' method first.")
+
+        min_threshold_gt_multiple_index = self._find_min_threshold_gt_multiple_index()
+
+        return self.buy_percentages[min_threshold_gt_multiple_index]
