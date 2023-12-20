@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from data.fetch_data import get_current_price, get_historical_crypto_data
 
+
 def test_get_current_price():
     # Test setup
     crypto = 'bitcoin'
@@ -49,7 +50,8 @@ def test_get_historical_crypto_data():
 
         # Execute function
         price_col = 'Open'
-        fetch_result = get_historical_crypto_data('2022-10-10', '2022-10-13', price_col, 'BTC-USD')
+        fetch_result = get_historical_crypto_data(
+            '2022-10-10', '2022-10-13', price_col, 'BTC-USD')
 
         # Assertions
         assert fetch_result.shape == (3, 2)

@@ -1,13 +1,16 @@
 import streamlit as st
 
+
 class CryptoOptApp:
     def __init__(self):
         self.title = "CryptoOpt App"
-        self.sidebar_options = ["Home", "Optimization", "Experiments", "Metrics"]
+        self.sidebar_options = [
+            "Home", "Optimization", "Experiments", "Metrics"]
         self.current_page = "Home"
 
     def run(self):
-        st.set_page_config(page_title=self.title, page_icon=":chart_with_upwards_trend:")
+        st.set_page_config(page_title=self.title,
+                           page_icon=":chart_with_upwards_trend:")
 
         self.sidebar()
 
@@ -22,7 +25,8 @@ class CryptoOptApp:
 
     def sidebar(self):
         st.sidebar.title(self.title)
-        self.current_page = st.sidebar.radio("Navigation", self.sidebar_options)
+        self.current_page = st.sidebar.radio(
+            "Navigation", self.sidebar_options)
 
     def home_page(self):
         st.title("Welcome to CryptoOpt App")
