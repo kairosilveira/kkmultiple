@@ -1,18 +1,121 @@
+import polars as pl
+import pytest
 from multiple.multiple import KKMultiple
-from data.fetch_data import get_historical_crypto_data
 
-kk_multiple = KKMultiple(days_moving_avg=5, buy_thresholds=[1, 2, 3,4,5])
 
-def test_calculate_avg():
-    historical_data = get_historical_crypto_data('2014-12-01', '2023-12-31', 'Open', 'BTC-USD')  
-    expected_avg = 42310.965625
-    actual_avg = kk_multiple.calculate_avg(historical_data)
-    assert actual_avg == expected_avg
+@pytest.fixture
+def sample_historical_data():
+    data = {
+        'Date': ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04'],
+        'Open': [100, 110, 120, 130]
+    }
+    response = pl.DataFrame(data)
+    response = response.with_columns([
+        pl.col("Date").str.to_datetime(),
+        pl.col("Open").cast(pl.Float64)
+    ])
+    return response
 
-def test_calculate_multiple():
-    historical_data = get_historical_crypto_data('2014-12-01', '2023-12-31', 'Open', 'BTC-USD')  
-    price = 100
-    expected_multiple = 0.0023634535048501393
-    actual_multiple = kk_multiple.calculate_multiple(price, historical_data)
-    assert actual_multiple == expected_multiple 
 
+@pytest.fixture
+def sample_parameters():
+    class_params = {
+        "days_moving_avg": 2,
+        "buy_params": {0.5: 1.0, 0.8: 0.8, 1: 0.6, 1.6: 0.4, 2: 0.2}
+    }
+    return class_params
+
+
+def test_invalid_initialization():
+    with pytest.raises(ValueError, match="days_moving_avg should be an integer greater than or equal to 1"):
+        KKMultiple(days_moving_avg=0, buy_params={
+                   0.5: 1.0, 0.8: 0.8, 1: 0.6, 1.6: 0.4, 2: 0.2})
+
+    with pytest.raises(ValueError, match="buy_params keys must be sorted in ascending order, and values must be sorted in descending order."):
+        KKMultiple(days_moving_avg=2, buy_params={
+                   0.5: 1.0, 0.8: 0.8, 1: 0.6, 0.6: 0.4, 2: 0.2})
+
+
+def test_calculate_avg(sample_historical_data, sample_parameters):
+    days_moving_avg = sample_parameters["days_moving_avg"]
+    buy_params = sample_parameters["buy_params"]
+
+    kkmultiple = KKMultiple(days_moving_avg, buy_params)
+
+    result = kkmultiple.calculate_avg(sample_historical_data)
+
+    assert result == 125.0  # (120 + 130) / 2
+
+
+def test_calculate_multiple(sample_historical_data, sample_parameters):
+    days_moving_avg = sample_parameters["days_moving_avg"]
+    buy_params = sample_parameters["buy_params"]
+
+    kkmultiple = KKMultiple(days_moving_avg, buy_params)
+
+    result = kkmultiple.calculate_multiple(140, sample_historical_data)
+
+    assert result == 1.12  # 140 / 125.0
+
+
+def test__find_min_threshold_gt_multiple(sample_parameters):
+
+    days_moving_avg = sample_parameters["days_moving_avg"]
+    buy_params = sample_parameters["buy_params"]
+
+    kkmultiple = KKMultiple(days_moving_avg, buy_params)
+
+    kkmultiple.multiple = 1.3
+
+    result = kkmultiple._find_min_threshold_gt_multiple()
+
+    assert result == 1.6
+    assert isinstance(result, float)
+
+
+def test__find_min_threshold_gt_multiple_when_multiple_gt_all(sample_parameters):
+    """
+    Test the '_find_min_threshold_gt_multiple' method of the KKMultiple class
+    when the 'multiple' attribute is greater than all thresholds.
+    """
+    days_moving_avg = sample_parameters["days_moving_avg"]
+    buy_params = sample_parameters["buy_params"]
+
+    kkmultiple = KKMultiple(days_moving_avg, buy_params)
+
+    kkmultiple.multiple = 3.0
+
+    result = kkmultiple._find_min_threshold_gt_multiple()
+
+    assert result == None
+
+
+def test_get_buy_percentage_with_calculated_multiple(sample_historical_data, sample_parameters):
+    days_moving_avg = sample_parameters["days_moving_avg"]
+    buy_params = sample_parameters["buy_params"]
+    
+    kkmultiple = KKMultiple(days_moving_avg, buy_params)
+    kkmultiple.calculate_multiple(140, sample_historical_data)
+    
+    result = kkmultiple.get_buy_percentage()
+    
+    assert result == 0.4  # Corresponds to the buy percentage associated with the calculated multiple.
+
+def test_get_buy_percentage_with_provided_multiple(sample_parameters):
+    days_moving_avg = sample_parameters["days_moving_avg"]
+    buy_params = sample_parameters["buy_params"]
+    
+    kkmultiple = KKMultiple(days_moving_avg, buy_params)
+    
+    result = kkmultiple.get_buy_percentage(multiple=1.5)
+    
+    assert result == 0.4  # Corresponds to the buy percentage associated with the provided multiple.
+
+def test_get_buy_percentage_without_calculated_or_provided_multiple(sample_parameters):
+    days_moving_avg = sample_parameters["days_moving_avg"]
+    buy_params = sample_parameters["buy_params"]
+    
+    kkmultiple = KKMultiple(days_moving_avg, buy_params)
+    
+    with pytest.raises(ValueError, match="Call 'calculate_multiple' before running this method or provide a 'multiple' parameter."):
+        kkmultiple.get_buy_percentage()

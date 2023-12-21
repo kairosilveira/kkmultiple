@@ -4,7 +4,8 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 import json
 import polars as pl
 
-def get_current_price(crypto = 'bitcoin', currency = 'usd'):
+
+def get_current_price(crypto='bitcoin', currency='usd'):
     """
     Get the current price of a cryptocurrency in a specified currency.
 
@@ -22,11 +23,11 @@ def get_current_price(crypto = 'bitcoin', currency = 'usd'):
     """
     url = "https://api.coingecko.com/api/v3/simple/price"
     headers = {
-    'Accepts': 'application/json',
+        'Accepts': 'application/json',
     }
     parameters = {
-    'ids':crypto,
-    'vs_currencies':currency
+        'ids': crypto,
+        'vs_currencies': currency
     }
     session = Session()
     session.headers.update(headers)
@@ -65,14 +66,13 @@ def get_historical_crypto_data(start_date, end_date, price_col, ticker="BTC-USD"
       │ 2023-12-31     │ 62000.0   │
       └────────────────┴───────────┘
     """
-    
+
     bitcoin_data = yf.download(ticker, start=start_date, end=end_date)
-    
+
     # Convert pandas DataFrame to Polars DataFrame
     polars_df = pl.DataFrame(bitcoin_data.reset_index())
-    
+
     # Select the specified columns
     polars_df = polars_df.select(["Date", price_col])
-    
-    return polars_df
 
+    return polars_df
