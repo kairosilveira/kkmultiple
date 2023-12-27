@@ -1,6 +1,6 @@
-import polars as pl
 import pytest
 from multiple.kkmultiple import KKMultiple
+
 
 def test_invalid_initialization():
     with pytest.raises(ValueError, match="days_moving_avg should be an integer greater than or equal to 1"):

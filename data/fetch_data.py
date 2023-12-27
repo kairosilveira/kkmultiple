@@ -74,5 +74,5 @@ def get_historical_crypto_data(start_date, end_date, price_col, ticker="BTC-USD"
 
     # Select the specified columns
     polars_df = polars_df.select(
-        ["Date", price_col]).rename({"Date": "date",price_col: 'price'})
+        ["Date", price_col]).rename({"Date": "date", price_col: 'price'})
     return polars_df

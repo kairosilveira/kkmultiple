@@ -1,6 +1,7 @@
 import pytest
 import polars as pl
 
+
 @pytest.fixture
 def sample_historical_data():
     data = {

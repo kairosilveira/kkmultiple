@@ -1,6 +1,6 @@
 from hyperopt import fmin, tpe, hp
-from multiple.multiple import KKMultiple
-from metric.crypto_accumulator import CryptoAccumulator
+from multiple.kkmultiple import KKMultiple
+from metrics.crypto_accumulator import CryptoAccumulator
 
 
 def objective(params, historical_data, eval_period):
