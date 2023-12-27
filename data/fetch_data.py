@@ -57,7 +57,7 @@ def get_historical_crypto_data(start_date, end_date, price_col, ticker="BTC-USD"
     - get_historical_crypto_data('2023-01-01', '2023-12-31', 'Close', 'BTC-USD') returns:
       shape: (365, 2)
       ┌────────────────┬───────────┐
-      │ Date           │ Close     │
+      │ Date           │ Price     │
       │ ───────────────┼───────────┤
       │ 2023-01-01     │ 47000.0   │
       │ 2023-01-02     │ 48000.0   │
@@ -73,6 +73,6 @@ def get_historical_crypto_data(start_date, end_date, price_col, ticker="BTC-USD"
     polars_df = pl.DataFrame(bitcoin_data.reset_index())
 
     # Select the specified columns
-    polars_df = polars_df.select(["Date", price_col])
-
+    polars_df = polars_df.select(
+        ["Date", price_col]).rename({"Date": "date",price_col: 'price'})
     return polars_df
