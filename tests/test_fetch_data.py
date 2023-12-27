@@ -57,6 +57,6 @@ def test_get_historical_crypto_data():
         assert fetch_result.shape == (3, 2)
         assert len(fetch_result.columns) == 2
         assert "Date" in fetch_result.columns
-        assert price_col in fetch_result.columns
+        assert 'Price' in fetch_result.columns
         assert pl.Datetime in fetch_result.dtypes
         assert pl.Float64 in fetch_result.dtypes

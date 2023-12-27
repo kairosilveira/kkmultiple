@@ -1,10 +1,14 @@
+import polars as pl
+from typing import Optional
+
+
 class KKMultiple:
     """
     A class for calculating buy percentages based on historical data and predefined parameters.
 
     Args:
     - days_moving_avg (int): Number of days for calculating the moving average of historical data.
-    - buy_params (dict): A dictionary defining buy percentages associated with specific thresholds.
+    - buy_params (dict): A dictionary defining buy percentages(values) associated with specific thresholds(keys).
 
     Attributes:
     - days_moving_avg (int): Number of days for calculating the moving average.
@@ -35,18 +39,19 @@ class KKMultiple:
     ```
     """
 
-    def __init__(self, days_moving_avg, buy_params) -> None:
+    def __init__(self, days_moving_avg: int, buy_params: dict) -> None:
         self._validate_params(days_moving_avg, buy_params)
 
         self.days_moving_avg = days_moving_avg
         self.buy_params = buy_params
         self.multiple = None
 
-    def _validate_params(self, days_moving_avg, buy_params):
+    def _validate_params(self, days_moving_avg: int, buy_params: dict):
         # days_moving_avg
-        if not isinstance(days_moving_avg, int) or days_moving_avg < 1:
-            raise ValueError(
-                "days_moving_avg should be an integer greater than or equal to 1")
+        error = ValueError(
+            "days_moving_avg should be an integer greater than or equal to 1. days_moving_avg={}".format(days_moving_avg))
+        if not (isinstance(days_moving_avg, int) or (isinstance(days_moving_avg, float) and days_moving_avg.is_integer())) or days_moving_avg < 1:
+            raise error
 
         # buy_params
         sorted_keys = sorted(buy_params.keys())
@@ -54,33 +59,44 @@ class KKMultiple:
 
         if sorted_keys != list(buy_params.keys()) or sorted_values != list(buy_params.values()):
             raise ValueError(
-                "buy_params keys must be sorted in ascending order, and values must be sorted in descending order.")
+                "buy_params keys must be sorted in ascending order, and values must be sorted in descending order. {}".format(buy_params))
 
-    def calculate_avg(self, historical_data):
+    def calculate_avg(self, historical_data: pl.DataFrame, days_moving_avg: Optional[int] = None) -> float:
         """
         Calculate the average of the price column in the historical data.
 
         Args:
-        - historical_data (polars.DataFrame): DataFrame containing historical data.
+        - historical_data (polars.DataFrame): DataFrame containing historical data, columns are 'Date' and 'Price'.
+        - days_moving_avg (Optional[int]): Number of days to consider for the moving average.
+        If not provided, the default value from the class attribute will be used.
 
         Returns:
         - float: The average of the price column over the specified number of days.
         """
-        price_col = historical_data.columns[1]
-        return historical_data[price_col][-self.days_moving_avg:].mean()
+        if days_moving_avg is None:
+            days_moving_avg = self.days_moving_avg
 
-    def calculate_multiple(self, price, historical_data):
+        price_col = historical_data.columns[1]
+        return historical_data[price_col][-days_moving_avg:].mean()
+
+    def calculate_multiple(self, price: float, historical_data: pl.DataFrame, mayer: bool = False) -> float:
         """
         Calculate the ratio of a given price to the moving average of historical data.
 
         Args:
         - price (float): The current price.
         - historical_data (polars.DataFrame): DataFrame containing historical data.
+        - mayer (bool): Flag indicating whether to use a specific Mayer multiple. If True, a 200-day moving average is used.
 
         Returns:
         - float: The ratio of the given price to the moving average of historical data.
         """
-        moving_avg = self.calculate_avg(historical_data)
+        if mayer:
+            days_moving_avg = 200
+        else:
+            days_moving_avg = self.days_moving_avg
+
+        moving_avg = self.calculate_avg(historical_data, days_moving_avg)
         self.multiple = price / moving_avg
         return self.multiple
 
@@ -107,7 +123,7 @@ class KKMultiple:
         else:
             return None
 
-    def get_buy_percentage(self, multiple=None):
+    def get_buy_percentage(self, multiple: Optional[float] = None):
         """
         Retrieve the buy percentage from buy_params based on the provided or stored multiple.
 
@@ -125,6 +141,4 @@ class KKMultiple:
             multiple = self.multiple
 
         threshold = self._find_min_threshold_gt_multiple(multiple)
-        return 0 if threshold is None else self.buy_params[threshold]
-    
-    
+        return 0.0 if threshold is None else self.buy_params[threshold]
