@@ -93,29 +93,33 @@ def test__find_min_threshold_gt_multiple_when_multiple_gt_all(sample_parameters)
 def test_get_buy_percentage_with_calculated_multiple(sample_historical_data, sample_parameters):
     days_moving_avg = sample_parameters["days_moving_avg"]
     buy_params = sample_parameters["buy_params"]
-    
+
     kkmultiple = KKMultiple(days_moving_avg, buy_params)
     kkmultiple.calculate_multiple(140, sample_historical_data)
-    
+
     result = kkmultiple.get_buy_percentage()
-    
-    assert result == 0.4  # Corresponds to the buy percentage associated with the calculated multiple.
+
+    # Corresponds to the buy percentage associated with the calculated multiple.
+    assert result == 0.4
+
 
 def test_get_buy_percentage_with_provided_multiple(sample_parameters):
     days_moving_avg = sample_parameters["days_moving_avg"]
     buy_params = sample_parameters["buy_params"]
-    
+
     kkmultiple = KKMultiple(days_moving_avg, buy_params)
-    
+
     result = kkmultiple.get_buy_percentage(multiple=1.5)
-    
-    assert result == 0.4  # Corresponds to the buy percentage associated with the provided multiple.
+
+    # Corresponds to the buy percentage associated with the provided multiple.
+    assert result == 0.4
+
 
 def test_get_buy_percentage_without_calculated_or_provided_multiple(sample_parameters):
     days_moving_avg = sample_parameters["days_moving_avg"]
     buy_params = sample_parameters["buy_params"]
-    
+
     kkmultiple = KKMultiple(days_moving_avg, buy_params)
-    
+
     with pytest.raises(ValueError, match="Call 'calculate_multiple' before running this method or provide a 'multiple' parameter."):
         kkmultiple.get_buy_percentage()
