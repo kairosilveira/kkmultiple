@@ -42,7 +42,7 @@ class KKMultiple:
     def __init__(self, days_moving_avg: int, buy_params: dict) -> None:
         self._validate_params(days_moving_avg, buy_params)
 
-        self.days_moving_avg = days_moving_avg
+        self.days_moving_avg = int(days_moving_avg)
         self.buy_params = buy_params
         self.multiple = None
 

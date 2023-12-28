@@ -1,26 +1,35 @@
-from hyperopt import fmin, tpe, hp
+from hyperopt import fmin, tpe
 from multiple.kkmultiple import KKMultiple
 from metrics.crypto_accumulator import CryptoAccumulator
+from functools import partial
 
 
-def objective(params, historical_data, eval_period):
+def objective(params, historical_data, train_period):
     days_moving_avg = params['days_moving_avg']
     buy_thresholds = sorted(params['buy_thresholds'])
     buy_percentages = params['buy_percentages']
     buy_params = dict(zip(buy_thresholds, buy_percentages))
     kkmult = KKMultiple(days_moving_avg, buy_params)
-    obj = CryptoAccumulator(kkmult, historical_data, eval_period)
-    crypto_accumulated = obj.accu()
-    return -crypto_accumulated
+    metric_calculator = CryptoAccumulator(
+        kkmult, historical_data, train_period)
+    crypto_accumulated = metric_calculator.get_accumulated_value()
+    return -crypto_accumulated.amount_accumulated
 
 
-def train():
-    space = {
-        'buy_thresholds': [hp.uniform(f'buy_thresholds_{i}', 0.5, 3) for i in range(5)],
-        'buy_percentages': [1, 0.8, 0.6, 0.4, 0.2],
-        'days_moving_avg': hp.quniform('your_param', 20, 500, 1),
+def train(space_params, historical_data, train_period, max_evals):
+    best = fmin(
+        fn=partial(objective, historical_data=historical_data,
+                   train_period=train_period),
+        space=space_params,
+        algo=tpe.suggest,
+        max_evals=max_evals)
+
+    buy_thresholds = sorted(list(best.values())[:-1])
+    buy_percentages = space_params['buy_percentages']
+    buy_params = dict(zip(buy_thresholds, buy_percentages))
+
+    best_formated = {
+        'days_moving_avg': best['days_moving_avg'],
+        'buy_params': buy_params
     }
-
-    best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=100)
-
-    print(best)
+    return best_formated
