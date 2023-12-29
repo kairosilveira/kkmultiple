@@ -2,6 +2,7 @@ import psycopg2
 from dotenv import load_dotenv
 import os
 import polars as pl
+import pandas as pd
 
 load_dotenv()
 
@@ -135,9 +136,9 @@ class PostgresManager:
             self.cursor.execute(select_query)
             rows = self.cursor.fetchall()
             column_names = [desc[0] for desc in self.cursor.description]
-            df = pl.DataFrame(rows)
+            df = pd.DataFrame(rows) # created as pd.DataFrame to fix the problem with big strings.
             df.columns = column_names
-            return df
+            return pl.DataFrame(df)
 
         except Exception as e:
             print("Error:", e)
