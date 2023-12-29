@@ -15,7 +15,7 @@ tests:
 	pytest tests/
 
 app:
-	streamlit run app/app.py
+	streamlit run app.py
 
 format:
 	autopep8 . --recursive --in-place
