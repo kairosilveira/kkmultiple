@@ -2,8 +2,10 @@ import psycopg2
 from dotenv import load_dotenv
 import os
 import polars as pl
+import pandas as pd
 
 load_dotenv()
+
 
 class PostgresManager:
     def __init__(self) -> None:
@@ -42,15 +44,15 @@ class PostgresManager:
             self.cursor.close()
         if self.connection:
             self.connection.close()
-        
-    def create_table(self, table_name, columns_and_types = {}):
+
+    def create_table(self, table_name, columns_and_types={}):
         """
         Create a new table in the PostgreSQL database.
 
         Parameters:
         - table_name (str): The name of the table to be created.
         - columns_and_types (dict): A dictionary specifying the columns and their data types.
-        
+
         Example:
         {
             'id': 'serial',          # Serial is a shorthand for primary key
@@ -77,7 +79,8 @@ class PostgresManager:
         """
 
         self._connect_to_postgres()
-        column_definitions = ", ".join([f"{column} {data_type}" for column, data_type in columns_and_types.items()])
+        column_definitions = ", ".join(
+            [f"{column} {data_type}" for column, data_type in columns_and_types.items()])
         create_table_query = f'''
         CREATE TABLE {table_name} (
             {column_definitions}
@@ -91,21 +94,21 @@ class PostgresManager:
         finally:
             self._close_connection()
 
-    def insert_data(self,table_name,data_to_insert):
+    def insert_data(self, table_name, data_to_insert):
         """
         Insert data into an existing table in the PostgreSQL database.
 
         Parameters:
         - table_name (str): The name of the table to insert data into.
         - data_to_insert (dict): A dictionary representing the data to be inserted.
-        
+
         Example:
         {
         'name': 'John Doe little',
         'age': 30
         }
         """
-        
+
         self._connect_to_postgres()
         insert_query = f'''
             INSERT INTO {table_name} ({", ".join(data_to_insert.keys())})
@@ -119,7 +122,7 @@ class PostgresManager:
         finally:
             self._close_connection()
 
-    def get_table_data(self,table_name):
+    def get_table_data(self, table_name):
         """
         Retrieve information about tables and columns in the PostgreSQL database.
 
@@ -133,15 +136,15 @@ class PostgresManager:
             self.cursor.execute(select_query)
             rows = self.cursor.fetchall()
             column_names = [desc[0] for desc in self.cursor.description]
-            df = pl.DataFrame(rows)
-            df.columns=column_names
-            return df
-        
+            df = pd.DataFrame(rows) # created as pd.DataFrame to fix the problem with big strings.
+            df.columns = column_names
+            return pl.DataFrame(df)
+
         except Exception as e:
             print("Error:", e)
         finally:
             self._close_connection()
-    
+
     def get_tables_info(self):
         """
         Retrieve information about tables and columns in the PostgreSQL database.
@@ -173,7 +176,7 @@ class PostgresManager:
         finally:
             self._close_connection()
 
-    def drop_table(self,table_name):
+    def drop_table(self, table_name):
         """
         Drop an existing table in the PostgreSQL database.
 
