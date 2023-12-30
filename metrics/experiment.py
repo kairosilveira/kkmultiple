@@ -27,6 +27,7 @@ class Experiment:
     def kk_strategy(self, space_params, initial_budget=0):
         AccumulatedResultExperiment = namedtuple(
             'AccumulatedResultExperiment', ['amount_accumulated', 'remaining_budget'])
+
         remaining_budget = initial_budget
         amount_accumulated = 0
         train_test_periods = self._get_train_test_dates()
@@ -36,11 +37,16 @@ class Experiment:
             best_params = train(
                 space_params, self.historical_data, train_period, self.max_evals)
             kk = KKMultiple(**best_params)
-            ca = CryptoAccumulator(kk, self.historical_data, test_period)
+            print("best_params: ", best_params)
+            ca = CryptoAccumulator(
+                historical_data=self.historical_data, eval_period=test_period, kkmult=kk)
             result = ca.get_accumulated_value(
                 remaining_budget=remaining_budget)
             amount_accumulated += result.amount_accumulated
             remaining_budget += result.remaining_budget
+            print(train_period)
+            print(test_period)
+
         return AccumulatedResultExperiment(amount_accumulated=amount_accumulated, remaining_budget=remaining_budget)
 
     def buy_every_day_strategy(self):
@@ -48,12 +54,8 @@ class Experiment:
         experiment_data = self.historical_data.filter(
             (pl.col("date") >= start) & (pl.col("date") <= end))
 
-        kkparams = {
-            "days_moving_avg": 10,
-            "buy_params": {0.5: 1, 1.0: 0.5, 1.5: 0.2}
-        }
-        kkmultiple = KKMultiple(**kkparams)
-        ca = CryptoAccumulator(kkmultiple, experiment_data, (start, end))
+        ca = CryptoAccumulator(
+            historical_data=experiment_data, eval_period=(start, end), method="buy_every_day")
         accumulated = ca.get_accumulated_value(method='buy_every_day')
 
         return accumulated

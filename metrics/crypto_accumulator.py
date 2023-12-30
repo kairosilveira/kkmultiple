@@ -1,5 +1,4 @@
 
-from data.fetch_data import get_historical_crypto_data
 from multiple.kkmultiple import KKMultiple
 import polars as pl
 from datetime import datetime
@@ -14,7 +13,7 @@ class CryptoAccumulator:
     Args:
     - kkmult (KKMultiple): An instance of the KKMultiple class.
     - historical_data (polars.DataFrame): DataFrame containing historical data.
-    - train_period (tuple): A tuple representing the training period (start_date, end_date), ('%Y-%m-%d', '%Y-%m-%d').
+    - eval_period (tuple): A tuple representing the training period (start_date, end_date), ('%Y-%m-%d', '%Y-%m-%d').
 
     Attributes:
     - kkmult (KKMultiple): An instance of the KKMultiple class.
@@ -29,12 +28,18 @@ class CryptoAccumulator:
     - _get_multiples(mayer=False) -> polars.DataFrame: Get the multiples calculated based on the provided strategy.
     """
 
-    def __init__(self, kkmult: KKMultiple, historical_data: pl.DataFrame, train_period: Tuple[str, str] | Tuple[datetime, datetime]) -> None:
+    def __init__(self, historical_data: pl.DataFrame, eval_period: Tuple[str, str] | Tuple[datetime, datetime], method: str = "kk", kkmult: KKMultiple | None = None) -> None:
         self.kkmult = kkmult
         self.historical_data = historical_data
-        self.start_date, self.end_date = train_period
+        self.start_date, self.end_date = eval_period
+        self.method = method
+
+        if method == "kk" and kkmult == None:
+            raise ValueError(
+                'If method is kk a KKMultiple object must be specified')
 
         if not isinstance(self.start_date, datetime):
+            print(self.start_date)
             self.start_date = datetime.strptime(self.start_date, '%Y-%m-%d')
             self.end_date = datetime.strptime(self.end_date, '%Y-%m-%d')
 
@@ -87,7 +92,7 @@ class CryptoAccumulator:
         return self.train_data
 
     def get_accumulated_value(self, daily_budget=1000, remaining_budget=0, method='kk'):
-        if method == 'kk':
+        if self.method == 'kk':
             AccumulatedResult = namedtuple(
                 'AccumulatedResult', ['amount_accumulated', 'remaining_budget'])
 
@@ -105,13 +110,13 @@ class CryptoAccumulator:
                 remaining_budget = day_budget - day_budget_use
             return AccumulatedResult(amount_accumulated=amount_accumulated, remaining_budget=remaining_budget)
 
-        if method == 'buy_every_day':
+        if self.method == 'buy_every_day':
             amount_accumulated = 0
             for row in self.historical_data.iter_rows():
                 date, price = row
                 amount_accumulated += daily_budget/price
 
-            # row[1] is the column price of historical_data
+            # row[1] is the column price of historical_data: df['price']
             values_bought = [daily_budget/row[1]
                              for row in self.historical_data.iter_rows()]
             return sum(values_bought)
