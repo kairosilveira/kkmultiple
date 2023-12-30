@@ -31,7 +31,7 @@ class PostgresManager:
             self.connection = psycopg2.connect(self.url)
             self.cursor = self.connection.cursor()
         except Exception as e:
-            print("Error:", e)
+            raise e
 
     def _close_connection(self):
         """
@@ -45,7 +45,7 @@ class PostgresManager:
         if self.connection:
             self.connection.close()
 
-    def create_table(self, table_name, columns_and_types={}):
+    def create_table(self, table_name:str, columns_and_types:dict={}):
         """
         Create a new table in the PostgreSQL database.
 
@@ -90,11 +90,11 @@ class PostgresManager:
             self.cursor.execute(create_table_query)
             self.connection.commit()
         except Exception as e:
-            print("Error:", e)
+            raise e
         finally:
             self._close_connection()
 
-    def insert_data(self, table_name, data_to_insert):
+    def insert_data(self, table_name:str, data_to_insert:dict):
         """
         Insert data into an existing table in the PostgreSQL database.
 
@@ -118,11 +118,11 @@ class PostgresManager:
             self.cursor.execute(insert_query, tuple(data_to_insert.values()))
             self.connection.commit()
         except Exception as e:
-            print("Error:", e)
+            raise e
         finally:
             self._close_connection()
 
-    def get_table_data(self, table_name):
+    def get_table_data(self, table_name:str):
         """
         Retrieve information about tables and columns in the PostgreSQL database.
 
@@ -136,12 +136,11 @@ class PostgresManager:
             self.cursor.execute(select_query)
             rows = self.cursor.fetchall()
             column_names = [desc[0] for desc in self.cursor.description]
-            df = pd.DataFrame(rows) # created as pd.DataFrame to fix the problem with big strings.
-            df.columns = column_names
+            df = pd.DataFrame(rows,columns=column_names) # created as pd.DataFrame to fix the problem with big strings.
             return pl.DataFrame(df)
 
         except Exception as e:
-            print("Error:", e)
+            raise e
         finally:
             self._close_connection()
 
@@ -169,16 +168,15 @@ class PostgresManager:
         try:
             self.cursor.execute(tables_query)
             table_names = self.cursor.fetchall()
-            df = pd.DataFrame(table_names)
-            df.columns = ['Table Name','Columns']
+            df = pd.DataFrame(table_names, columns=['Table Name','Columns'])
             return pl.DataFrame(df)\
                 .group_by('Table Name').agg(pl.col('Columns'))
         except Exception as e:
-            print("Error:", e)
+            raise e
         finally:
             self._close_connection()
 
-    def drop_table(self, table_name):
+    def drop_table(self, table_name:str):
         """
         Drop an existing table in the PostgreSQL database.
 
@@ -192,6 +190,6 @@ class PostgresManager:
             self.cursor.execute(drop_table_query)
             self.connection.commit()
         except Exception as e:
-            print("Error:", e)
+            raise e
         finally:
             self._close_connection()
