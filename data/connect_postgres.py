@@ -15,7 +15,7 @@ class PostgresManager:
         The constructor sets up the URL for connecting to the PostgreSQL database.
 
         """
-        self.url = f"postgres://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
+        self.url = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
         self.connection = None
         self.cursor = None
 
@@ -169,7 +169,9 @@ class PostgresManager:
         try:
             self.cursor.execute(tables_query)
             table_names = self.cursor.fetchall()
-            return pl.DataFrame(table_names, schema={"Table Name": pl.Object, "Columns": pl.Object})\
+            df = pd.DataFrame(table_names)
+            df.columns = ['Table Name','Columns']
+            return pl.DataFrame(df)\
                 .group_by('Table Name').agg(pl.col('Columns'))
         except Exception as e:
             print("Error:", e)
