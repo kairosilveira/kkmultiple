@@ -136,9 +136,7 @@ class PostgresManager:
             self.cursor.execute(select_query)
             rows = self.cursor.fetchall()
             column_names = [desc[0] for desc in self.cursor.description]
-            # created as pd.DataFrame to fix the problem with big strings.
-            df = pd.DataFrame(rows)
-            df.columns = column_names
+            df = pd.DataFrame(rows,columns=column_names) # created as pd.DataFrame to fix the problem with big strings.
             return pl.DataFrame(df)
 
         except Exception as e:
