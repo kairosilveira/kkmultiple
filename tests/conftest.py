@@ -32,5 +32,5 @@ def sample_kkmultiple(sample_parameters):
 
 
 @pytest.fixture
-def sample_train_period():
+def sample_eval_period():
     return ('2023-01-03', '2023-01-04')

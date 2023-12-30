@@ -1,10 +1,27 @@
 from metrics.crypto_accumulator import CryptoAccumulator
 import polars as pl
+import pytest
+import re
 
 
-def test__get_raw_train_data(sample_kkmultiple, sample_historical_data, sample_train_period):
+
+def test_invalid_init(sample_historical_data, sample_eval_period):
+    possible_methods = CryptoAccumulator.possible_methods
+    with pytest.raises(ValueError,
+                       match="If method is 'kk' a KKMultiple object must be specified"):
+        CryptoAccumulator(sample_historical_data,
+                          sample_eval_period, method='kk')
+
+    with pytest.raises(ValueError,
+                       match=re.escape(f"The method 'kkk' is not one of the possible methods: {possible_methods}")):
+        CryptoAccumulator(sample_historical_data,
+                          sample_eval_period, method='kkk')
+
+
+
+def test__get_raw_train_data(sample_kkmultiple, sample_historical_data, sample_eval_period):
     accumulator = CryptoAccumulator(
-        sample_kkmultiple, sample_historical_data, sample_train_period)
+        historical_data=sample_historical_data, kkmult=sample_kkmultiple, eval_period=sample_eval_period)
 
     train_data = accumulator._get_raw_train_data()
 
@@ -18,9 +35,9 @@ def test__get_raw_train_data(sample_kkmultiple, sample_historical_data, sample_t
     assert pl.Float64 in train_data.dtypes
 
 
-def test__get_multiples(sample_kkmultiple, sample_historical_data, sample_train_period):
+def test__get_multiples(sample_kkmultiple, sample_historical_data, sample_eval_period):
     accumulator = CryptoAccumulator(
-        sample_kkmultiple, sample_historical_data, sample_train_period)
+        historical_data=sample_historical_data, kkmult=sample_kkmultiple, eval_period=sample_eval_period)
     accumulator._get_raw_train_data()
 
     multiples = accumulator._get_multiples()
@@ -33,9 +50,10 @@ def test__get_multiples(sample_kkmultiple, sample_historical_data, sample_train_
     assert multiples["multiples"][1] == 1.0
 
 
-def test__get_buy_percentages(sample_kkmultiple, sample_historical_data, sample_train_period):
+def test__get_buy_percentages(sample_kkmultiple, sample_historical_data, sample_eval_period):
     accumulator = CryptoAccumulator(
-        sample_kkmultiple, sample_historical_data, sample_train_period)
+        historical_data=sample_historical_data, kkmult=sample_kkmultiple, eval_period=sample_eval_period)
+
     accumulator._get_raw_train_data()
     accumulator._get_multiples()
 
@@ -49,9 +67,10 @@ def test__get_buy_percentages(sample_kkmultiple, sample_historical_data, sample_
     assert buy_percentages["buy_percentages"][1] == 0.4
 
 
-def test_get_train_data(sample_kkmultiple, sample_historical_data, sample_train_period):
+def test_get_train_data(sample_kkmultiple, sample_historical_data, sample_eval_period):
     accumulator = CryptoAccumulator(
-        sample_kkmultiple, sample_historical_data, sample_train_period)
+        historical_data=sample_historical_data, kkmult=sample_kkmultiple, eval_period=sample_eval_period)
+
     accumulator._get_raw_train_data()
     accumulator._get_multiples()
     accumulator._get_buy_percentages()
@@ -66,9 +85,9 @@ def test_get_train_data(sample_kkmultiple, sample_historical_data, sample_train_
     assert "buy_percentages" in train_data.columns
 
 
-def test_get_accumulated_value(sample_kkmultiple, sample_historical_data, sample_train_period):
+def test_get_accumulated_value(sample_kkmultiple, sample_historical_data, sample_eval_period):
     accumulator = CryptoAccumulator(
-        sample_kkmultiple, sample_historical_data, sample_train_period)
+        historical_data=sample_historical_data, kkmult=sample_kkmultiple, eval_period=sample_eval_period)
 
     accumulated_result = accumulator.get_accumulated_value()
 
@@ -78,3 +97,12 @@ def test_get_accumulated_value(sample_kkmultiple, sample_historical_data, sample
     assert isinstance(accumulated_result.remaining_budget, float)
     assert accumulated_result.amount_accumulated == 0.4*1000/120 + 0.4*1600/130
     assert accumulated_result.remaining_budget == 2000-(0.4*1000 + 0.4*1600)
+
+
+def test_get_accumulated_value(sample_historical_data, sample_eval_period):
+    accumulator = CryptoAccumulator(
+        sample_historical_data, sample_eval_period, method="buy_every_day")
+
+    assert accumulator.get_accumulated_value() == 1000/120+1000/130
+
+#test for method mayer too

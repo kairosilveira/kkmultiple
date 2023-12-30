@@ -11,7 +11,7 @@ def objective(params, historical_data, train_period):
     buy_params = dict(zip(buy_thresholds, buy_percentages))
     kkmult = KKMultiple(days_moving_avg, buy_params)
     metric_calculator = CryptoAccumulator(
-        kkmult, historical_data, train_period)
+        historical_data=historical_data, eval_period=train_period, kkmult=kkmult)
     crypto_accumulated = metric_calculator.get_accumulated_value()
     return -crypto_accumulated.amount_accumulated
 
