@@ -4,6 +4,7 @@ from multiple.kkmultiple import KKMultiple
 import polars as pl
 from datetime import datetime
 from collections import namedtuple
+from typing import Tuple
 
 
 class CryptoAccumulator:
@@ -28,18 +29,16 @@ class CryptoAccumulator:
     - _get_multiples(mayer=False) -> polars.DataFrame: Get the multiples calculated based on the provided strategy.
     """
 
-    def __init__(self, kkmult: KKMultiple, historical_data: pl.DataFrame, train_period: tuple) -> None:
+    def __init__(self, kkmult: KKMultiple, historical_data: pl.DataFrame, train_period: Tuple[str, str] | Tuple[datetime, datetime]) -> None:
         self.kkmult = kkmult
         self.historical_data = historical_data
-        start_date, end_date = train_period
-        self.start_date = datetime.strptime(start_date, '%Y-%m-%d')
-        self.end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        self.start_date, self.end_date = train_period
+
+        if not isinstance(self.start_date, datetime):
+            self.start_date = datetime.strptime(self.start_date, '%Y-%m-%d')
+            self.end_date = datetime.strptime(self.end_date, '%Y-%m-%d')
 
         self.raw_train_data = None
-
-    def calculate_accumulated(self):
-        # this method will be written later
-        return
 
     def _get_raw_train_data(self) -> pl.DataFrame:
         """
@@ -87,23 +86,32 @@ class CryptoAccumulator:
             [self.raw_train_data, self.multiples, self.buy_percentages], how="horizontal")
         return self.train_data
 
-    def get_accumulated_value(self, daily_budget=1000):
-        AccumulatedResult = namedtuple(
-            'AccumulatedResult', ['amount_accumulated', 'remaining_budget'])
+    def get_accumulated_value(self, daily_budget=1000, remaining_budget=0, method='kk'):
+        if method == 'kk':
+            AccumulatedResult = namedtuple(
+                'AccumulatedResult', ['amount_accumulated', 'remaining_budget'])
 
-        self._get_raw_train_data()
-        self._get_multiples()
-        self._get_buy_percentages()
-        self.get_train_data()
+            self._get_raw_train_data()
+            self._get_multiples()
+            self._get_buy_percentages()
+            self.get_train_data()
+            amount_accumulated = 0
+            for row in self.train_data.iter_rows():
+                date, price, multiple, buy_percentage = row
+                day_budget = daily_budget + remaining_budget
+                day_budget_use = day_budget*buy_percentage
+                day_purchase = day_budget_use/price
+                amount_accumulated += day_purchase
+                remaining_budget = day_budget - day_budget_use
+            return AccumulatedResult(amount_accumulated=amount_accumulated, remaining_budget=remaining_budget)
 
-        remaining_budget = 0
-        amount_accumulated = 0
-        for row in self.train_data.iter_rows():
-            date, price, multiple, buy_percentage = row
-            day_budget = daily_budget + remaining_budget
-            day_budget_use = day_budget*buy_percentage
-            day_purchase = day_budget_use/price
-            amount_accumulated += day_purchase
-            remaining_budget = day_budget - day_budget_use
+        if method == 'buy_every_day':
+            amount_accumulated = 0
+            for row in self.historical_data.iter_rows():
+                date, price = row
+                amount_accumulated += daily_budget/price
 
-        return AccumulatedResult(amount_accumulated=amount_accumulated, remaining_budget=remaining_budget)
+            # row[1] is the column price of historical_data
+            values_bought = [daily_budget/row[1]
+                             for row in self.historical_data.iter_rows()]
+            return sum(values_bought)
