@@ -17,16 +17,21 @@ class Experiment:
 
     def run(self, space_params, initial_budget=0):
         ExperimentResult = namedtuple(
-            'ExperimentResult', ['kkstrategy', 'buy_every_day_strategy'])
+            'ExperimentResult',
+            ['kkstrategy', 'buy_every_day_strategy']
+        )
 
         kkresult = self.kk_strategy(space_params, initial_budget)
         buy_everyday_result = self.buy_every_day_strategy()
         return ExperimentResult(kkstrategy=kkresult,
-                                buy_every_day_strategy=buy_everyday_result)
+                                buy_every_day_strategy=buy_everyday_result
+                                )
 
     def kk_strategy(self, space_params, initial_budget=0):
         AccumulatedResultExperiment = namedtuple(
-            'AccumulatedResultExperiment', ['amount_accumulated', 'remaining_budget'])
+            'AccumulatedResultExperiment',
+            ['amount_accumulated', 'remaining_budget']
+        )
 
         remaining_budget = initial_budget
         amount_accumulated = 0
@@ -37,26 +42,23 @@ class Experiment:
             best_params = train(
                 space_params, self.historical_data, train_period, self.max_evals)
             kk = KKMultiple(**best_params)
-            print("best_params: ", best_params)
             ca = CryptoAccumulator(
                 historical_data=self.historical_data, eval_period=test_period, kkmult=kk)
             result = ca.get_accumulated_value(
                 remaining_budget=remaining_budget)
             amount_accumulated += result.amount_accumulated
             remaining_budget += result.remaining_budget
-            print(train_period)
-            print(test_period)
 
-        return AccumulatedResultExperiment(amount_accumulated=amount_accumulated, remaining_budget=remaining_budget)
+        return AccumulatedResultExperiment(
+            amount_accumulated=amount_accumulated,
+            remaining_budget=remaining_budget
+        )
 
     def buy_every_day_strategy(self):
         start, end = self._get_experiment_interval()
-        experiment_data = self.historical_data.filter(
-            (pl.col("date") >= start) & (pl.col("date") <= end))
-
         ca = CryptoAccumulator(
-            historical_data=experiment_data, eval_period=(start, end), method="buy_every_day")
-        accumulated = ca.get_accumulated_value(method='buy_every_day')
+            historical_data=self.historical_data, eval_period=(start, end), method="buy_every_day")
+        accumulated = ca.get_accumulated_value()
 
         return accumulated
 

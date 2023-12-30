@@ -11,22 +11,19 @@ class CryptoAccumulator:
     A class representing a Crypto Accumulator that calculates accumulated values based on a specified strategy.
 
     Args:
-    - kkmult (KKMultiple): An instance of the KKMultiple class.
     - historical_data (polars.DataFrame): DataFrame containing historical data.
-    - eval_period (tuple): A tuple representing the training period (start_date, end_date), ('%Y-%m-%d', '%Y-%m-%d').
+    - eval_period (Tuple[str, str] | Tuple[datetime, datetime]): A tuple representing the training period (start_date, end_date), ('%Y-%m-%d', '%Y-%m-%d').
+    - method (str, optional): The strategy method to use. Defaults to "kk".
+    - kkmult (KKMultiple, optional): An instance of the KKMultiple class. Required if method is "kk".
 
     Attributes:
-    - kkmult (KKMultiple): An instance of the KKMultiple class.
+    - kkmult (KKMultiple | None): An instance of the KKMultiple class.
     - historical_data (polars.DataFrame): DataFrame containing historical data.
     - start_date (datetime): The start date of the training period.
     - end_date (datetime): The end date of the training period.
-    - raw_train_data (polars.DataFrame or None): DataFrame containing the training data within the specified period.
-
-    Methods:
-    - calculate_accumulated(): Calculate the accumulated value based on the provided strategy.
-    - _get_raw_train_data() -> polars.DataFrame: Get the training data within the specified period.
-    - _get_multiples(mayer=False) -> polars.DataFrame: Get the multiples calculated based on the provided strategy.
+    - raw_train_data (polars.DataFrame | None): DataFrame containing the training data within the specified period.
     """
+    possible_methods = ['kk', 'buy_every_day', 'mayer']
 
     def __init__(self, historical_data: pl.DataFrame, eval_period: Tuple[str, str] | Tuple[datetime, datetime], method: str = "kk", kkmult: KKMultiple | None = None) -> None:
         self.kkmult = kkmult
@@ -36,10 +33,13 @@ class CryptoAccumulator:
 
         if method == "kk" and kkmult == None:
             raise ValueError(
-                'If method is kk a KKMultiple object must be specified')
+                "If method is 'kk' a KKMultiple object must be specified")
 
+        if method not in self.possible_methods:
+            raise ValueError(
+                f"The method '{method}' is not one of the possible methods: {self.possible_methods}")
+        
         if not isinstance(self.start_date, datetime):
-            print(self.start_date)
             self.start_date = datetime.strptime(self.start_date, '%Y-%m-%d')
             self.end_date = datetime.strptime(self.end_date, '%Y-%m-%d')
 
@@ -91,32 +91,46 @@ class CryptoAccumulator:
             [self.raw_train_data, self.multiples, self.buy_percentages], how="horizontal")
         return self.train_data
 
-    def get_accumulated_value(self, daily_budget=1000, remaining_budget=0, method='kk'):
+    def get_accumulated_value(self, daily_budget=1000, remaining_budget=0, mayer_threshold = 2.4):
         if self.method == 'kk':
-            AccumulatedResult = namedtuple(
+            return self.kk(daily_budget, remaining_budget)
+        if self.method == 'buy_every_day':
+            return self.buy_every_day(daily_budget)
+        if self.method == 'mayer':
+            return self.mayer(daily_budget, mayer_threshold)
+
+    def kk(self, daily_budget, remaining_budget):
+        AccumulatedResult = namedtuple(
                 'AccumulatedResult', ['amount_accumulated', 'remaining_budget'])
 
-            self._get_raw_train_data()
-            self._get_multiples()
-            self._get_buy_percentages()
-            self.get_train_data()
-            amount_accumulated = 0
-            for row in self.train_data.iter_rows():
-                date, price, multiple, buy_percentage = row
-                day_budget = daily_budget + remaining_budget
-                day_budget_use = day_budget*buy_percentage
-                day_purchase = day_budget_use/price
-                amount_accumulated += day_purchase
-                remaining_budget = day_budget - day_budget_use
-            return AccumulatedResult(amount_accumulated=amount_accumulated, remaining_budget=remaining_budget)
+        self._get_raw_train_data()
+        self._get_multiples()
+        self._get_buy_percentages()
+        self.get_train_data()
+        amount_accumulated = 0
+        for row in self.train_data.iter_rows():
+            date, price, multiple, buy_percentage = row
+            day_budget = daily_budget + remaining_budget
+            day_budget_use = day_budget*buy_percentage
+            day_purchase = day_budget_use/price
+            amount_accumulated += day_purchase
+            remaining_budget = day_budget - day_budget_use
+        return AccumulatedResult(amount_accumulated=amount_accumulated, remaining_budget=remaining_budget)
 
-        if self.method == 'buy_every_day':
-            amount_accumulated = 0
-            for row in self.historical_data.iter_rows():
-                date, price = row
-                amount_accumulated += daily_budget/price
+    def buy_every_day(self, daily_budget):
+        eval_data = self._get_raw_train_data()
+        amount_accumulated = 0
+        for row in eval_data.iter_rows():
+            date, price = row
+            amount_accumulated += daily_budget/price
 
-            # row[1] is the column price of historical_data: df['price']
-            values_bought = [daily_budget/row[1]
-                             for row in self.historical_data.iter_rows()]
-            return sum(values_bought)
+        # row[1] is the column price of eval_data: eval_data['price']
+        values_bought = [daily_budget/row[1]
+                            for row in eval_data.iter_rows()]
+        return sum(values_bought)
+
+    def mayer(self, daily_budget, mayer_threshold):
+        # not implemented yet
+        # maybe you can use _get_multiples method with parameter mayer.
+        #please find a better name for these methods: kk, buy_every_day, mayer
+        pass
