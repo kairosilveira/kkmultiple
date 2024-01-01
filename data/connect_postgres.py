@@ -45,7 +45,7 @@ class PostgresManager:
         if self.connection:
             self.connection.close()
 
-    def create_table(self, table_name:str, columns_and_types:dict={}):
+    def create_table(self, table_name: str, columns_and_types: dict = {}):
         """
         Create a new table in the PostgreSQL database.
 
@@ -94,7 +94,7 @@ class PostgresManager:
         finally:
             self._close_connection()
 
-    def insert_data(self, table_name:str, data_to_insert:dict):
+    def insert_data(self, table_name: str, data_to_insert: dict):
         """
         Insert data into an existing table in the PostgreSQL database.
 
@@ -122,7 +122,7 @@ class PostgresManager:
         finally:
             self._close_connection()
 
-    def get_table_data(self, table_name:str):
+    def get_table_data(self, table_name: str):
         """
         Retrieve information about tables and columns in the PostgreSQL database.
 
@@ -136,7 +136,8 @@ class PostgresManager:
             self.cursor.execute(select_query)
             rows = self.cursor.fetchall()
             column_names = [desc[0] for desc in self.cursor.description]
-            df = pd.DataFrame(rows,columns=column_names) # created as pd.DataFrame to fix the problem with big strings.
+            # created as pd.DataFrame to fix the problem with big strings.
+            df = pd.DataFrame(rows, columns=column_names)
             return pl.DataFrame(df)
 
         except Exception as e:
@@ -168,7 +169,7 @@ class PostgresManager:
         try:
             self.cursor.execute(tables_query)
             table_names = self.cursor.fetchall()
-            df = pd.DataFrame(table_names, columns=['Table Name','Columns'])
+            df = pd.DataFrame(table_names, columns=['Table Name', 'Columns'])
             return pl.DataFrame(df)\
                 .group_by('Table Name').agg(pl.col('Columns'))
         except Exception as e:
@@ -176,7 +177,7 @@ class PostgresManager:
         finally:
             self._close_connection()
 
-    def drop_table(self, table_name:str):
+    def drop_table(self, table_name: str):
         """
         Drop an existing table in the PostgreSQL database.
 
