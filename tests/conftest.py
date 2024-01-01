@@ -1,20 +1,22 @@
 import pytest
 import polars as pl
 from multiple.kkmultiple import KKMultiple
+from metrics.crypto_accumulator import CryptoAccumulator
+from functools import namedtuple
 
 
 @pytest.fixture
 def sample_historical_data():
     data = {
-        'date': ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04'],
-        'price': [100, 140, 120, 130]
+        'date': ['2022-12-25', '2022-12-26', '2022-12-27', '2022-12-28', '2022-12-29', '2022-12-30', '2022-12-31', '2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04'],
+        'price': [100, 100, 100, 100, 100, 100, 100, 100, 140, 120, 130,]
     }
-    response = pl.DataFrame(data)
-    response = response.with_columns([
+    historical_data = pl.DataFrame(data)
+    historical_data = historical_data.with_columns([
         pl.col("date").str.to_datetime(),
         pl.col("price").cast(pl.Float64)
     ])
-    return response
+    return historical_data
 
 
 @pytest.fixture

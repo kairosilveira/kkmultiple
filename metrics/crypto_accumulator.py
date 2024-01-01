@@ -38,7 +38,7 @@ class CryptoAccumulator:
         if method not in self.possible_methods:
             raise ValueError(
                 f"The method '{method}' is not one of the possible methods: {self.possible_methods}")
-        
+
         if not isinstance(self.start_date, datetime):
             self.start_date = datetime.strptime(self.start_date, '%Y-%m-%d')
             self.end_date = datetime.strptime(self.end_date, '%Y-%m-%d')
@@ -87,11 +87,15 @@ class CryptoAccumulator:
         return self.buy_percentages
 
     def get_train_data(self):
+
+        self._get_raw_train_data()
+        self._get_multiples()
+        self._get_buy_percentages()
         self.train_data = pl.concat(
             [self.raw_train_data, self.multiples, self.buy_percentages], how="horizontal")
         return self.train_data
 
-    def get_accumulated_value(self, daily_budget=1000, remaining_budget=0, mayer_threshold = 2.4):
+    def get_accumulated_value(self, daily_budget=1000, remaining_budget=0, mayer_threshold=2.4):
         if self.method == 'kk':
             return self.kk(daily_budget, remaining_budget)
         if self.method == 'buy_every_day':
@@ -101,11 +105,7 @@ class CryptoAccumulator:
 
     def kk(self, daily_budget, remaining_budget):
         AccumulatedResult = namedtuple(
-                'AccumulatedResult', ['amount_accumulated', 'remaining_budget'])
-
-        self._get_raw_train_data()
-        self._get_multiples()
-        self._get_buy_percentages()
+            'AccumulatedResult', ['amount_accumulated', 'remaining_budget'])
         self.get_train_data()
         amount_accumulated = 0
         for row in self.train_data.iter_rows():
@@ -126,11 +126,11 @@ class CryptoAccumulator:
 
         # row[1] is the column price of eval_data: eval_data['price']
         values_bought = [daily_budget/row[1]
-                            for row in eval_data.iter_rows()]
+                         for row in eval_data.iter_rows()]
         return sum(values_bought)
 
     def mayer(self, daily_budget, mayer_threshold):
         # not implemented yet
         # maybe you can use _get_multiples method with parameter mayer.
-        #please find a better name for these methods: kk, buy_every_day, mayer
+        # please find a better name for these methods: kk, buy_every_day, mayer
         pass

@@ -4,7 +4,6 @@ import pytest
 import re
 
 
-
 def test_invalid_init(sample_historical_data, sample_eval_period):
     possible_methods = CryptoAccumulator.possible_methods
     with pytest.raises(ValueError,
@@ -16,7 +15,6 @@ def test_invalid_init(sample_historical_data, sample_eval_period):
                        match=re.escape(f"The method 'kkk' is not one of the possible methods: {possible_methods}")):
         CryptoAccumulator(sample_historical_data,
                           sample_eval_period, method='kkk')
-
 
 
 def test__get_raw_train_data(sample_kkmultiple, sample_historical_data, sample_eval_period):
@@ -99,10 +97,22 @@ def test_get_accumulated_value(sample_kkmultiple, sample_historical_data, sample
     assert accumulated_result.remaining_budget == 2000-(0.4*1000 + 0.4*1600)
 
 
+def test_get_accumulated_value_2days(sample_kkmultiple, sample_historical_data):
+
+    accumulator = CryptoAccumulator(
+        historical_data=sample_historical_data, kkmult=sample_kkmultiple, eval_period=('2022-12-29', '2022-12-30'))
+
+    accumulated_result = accumulator.get_accumulated_value(
+        remaining_budget=960)
+
+    assert accumulated_result.amount_accumulated == (
+        960+1000)*0.4/100 + ((960+1000)*0.6+1000)*0.4/100
+
+
 def test_get_accumulated_value(sample_historical_data, sample_eval_period):
     accumulator = CryptoAccumulator(
         sample_historical_data, sample_eval_period, method="buy_every_day")
 
     assert accumulator.get_accumulated_value() == 1000/120+1000/130
 
-#test for method mayer too
+# test for method mayer too
