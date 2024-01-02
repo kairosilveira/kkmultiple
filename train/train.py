@@ -7,7 +7,8 @@ from functools import partial
 def objective(params, historical_data, train_period):
     days_moving_avg = params['days_moving_avg']
     buy_thresholds = sorted(params['buy_thresholds'])
-    buy_percentages = params['buy_percentages']
+    buy_percentages = sorted(params['buy_percentages'], reverse=True)
+
     buy_params = dict(zip(buy_thresholds, buy_percentages))
     kkmult = KKMultiple(days_moving_avg, buy_params)
     metric_calculator = CryptoAccumulator(
@@ -24,12 +25,14 @@ def train(space_params, historical_data, train_period, max_evals):
         algo=tpe.suggest,
         max_evals=max_evals)
 
-    buy_thresholds = sorted(list(best.values())[:-1])
-    buy_percentages = space_params['buy_percentages']
+    buy_thresholds = sorted(list(best.values())[5:-1])
+    # buy_percentages = space_params['buy_percentages']
+    buy_percentages = sorted(list(best.values())[:5], reverse=True)
     buy_params = dict(zip(buy_thresholds, buy_percentages))
 
     best_formated = {
         'days_moving_avg': best['days_moving_avg'],
         'buy_params': buy_params
     }
+    print(best_formated)
     return best_formated
