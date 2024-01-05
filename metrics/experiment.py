@@ -1,90 +1,83 @@
 from multiple.kkmultiple import KKMultiple
 from train.train import train
-from metrics.crypto_accumulator import CryptoAccumulator
+from metrics.cumulative_return import CumulativeReturn
 import polars as pl
 import pandas as pd
 from collections import namedtuple
+from datetime import timedelta
 
 
 class Experiment:
-    def __init__(self, historical_data: pl.DataFrame, retrain_freq: int = 30, skip_days: int = 500, max_evals: int = 500) -> None:
+    def __init__(self, historical_data: pl.DataFrame, retrain_freq: int = 30, train_days=100, skip_days: int = 300, max_evals: int = 500) -> None:
         self.historical_data = historical_data
         self.retrain_freq = retrain_freq
+        self.train_days = train_days
         self.skip_days = skip_days
         self.max_evals = max_evals
 
-    def run(self, space_params, initial_budget=0):
+    def run(self, space_params):
         ExperimentResult = namedtuple(
             'ExperimentResult',
-            ['kkstrategy', 'buy_every_day_strategy', 'mayer']
+            ['kk', 'mayer']
         )
 
-        kkresult = self.get_method_result(
-            method='kk', space_params=space_params, initial_budget=initial_budget)
-
-        buy_everyday_result = self.get_method_result(method='buy_every_day')
-
+        kkresult = self.kkmultiple_strategy(space_params )
         # mayer is not implemented yet
         # mayer_result = self.get_method_result(method='mayer')
         mayer_result = 0
-        return ExperimentResult(kkstrategy=kkresult,
-                                buy_every_day_strategy=buy_everyday_result,
+        return ExperimentResult(kk=kkresult,
                                 mayer=mayer_result
                                 )
 
-    def get_method_result(self, method='kk', space_params=None, initial_budget=0):
-        if method == 'kk':
-            if space_params == None:
-                raise ValueError(
-                    "space_params should be provided if method = kk")
-            return self.kk_strategy(space_params, initial_budget= initial_budget)
-        else:
-            start, end = self._get_experiment_interval()
-            accumulator = CryptoAccumulator(
-                historical_data=self.historical_data, eval_period=(start, end), method=method)
-            accumulated = accumulator.get_accumulated_value()
-            return accumulated
+    def kkmultiple_strategy(self, space_params, initial_fiat=1000):
+        train_test_periods_dict = self._get_train_test_dict()
 
-    def kk_strategy(self, space_params, initial_budget=0):
-        AccumulatedResultExperiment = namedtuple(
-            'AccumulatedResultExperiment',
-            ['amount_accumulated', 'remaining_budget']
-        )
+        fiat = initial_fiat
+        crypto = 0.0
+        for train_period in train_test_periods_dict:
+            start_train, end_train = train_period
+            start_test, end_test = train_test_periods_dict[train_period]
 
-        remaining_budget = initial_budget
-        amount_accumulated = 0
-        train_test_periods = self._get_train_test_dates()
-        for train_period, test_period in zip(train_test_periods, train_test_periods[1:]):
             best_params = train(
-                space_params, self.historical_data, train_period, self.max_evals)
+                space_params, self.historical_data, start_train, end_train, self.max_evals)
             kk = KKMultiple(**best_params)
-            accumulator = CryptoAccumulator(
-                historical_data=self.historical_data, eval_period=test_period, kkmult=kk)
+            trading_data = kk.get_trade_signals_df(
+                self.historical_data, start_test, end_test)
+            cum_return = CumulativeReturn(trading_data)
+            result = cum_return.calculate(fiat, crypto)
+            fiat = result.fiat
+            crypto = result.crypto
+    
 
-            result = accumulator.get_accumulated_value(
-                remaining_budget=remaining_budget)
+        last_price = self.historical_data.filter(
+            pl.col('date') == end_test
+        )['price'][0]
 
-            amount_accumulated += result.amount_accumulated
-            remaining_budget = result.remaining_budget
+        
 
-        return AccumulatedResultExperiment(
-            amount_accumulated=amount_accumulated,
-            remaining_budget=remaining_budget
-        )
+        return fiat + last_price*crypto
 
-    def _get_train_test_dates(self):
-        start, end = self._get_experiment_interval()
+    def _get_train_test_dict(self):
+        start_date, end_date = self._get_experiment_interval()
+        start_test_date = start_date + timedelta(days=self.train_days)
 
-        date_range = pd.date_range(
-            start, end, freq=pd.Timedelta(days=self.retrain_freq))
+        test_periods = []
+        while start_test_date + timedelta(days=self.retrain_freq - 1) <= end_date:
+            test_periods.append(
+                (start_test_date, start_test_date + timedelta(days=self.retrain_freq - 1))
+            )
+            start_test_date += timedelta(days=self.retrain_freq)
 
-        time_delta = pd.Timedelta(days=self.retrain_freq-1)
-        return [(current_date, current_date + time_delta) for current_date in date_range
-                if current_date + time_delta <= end]
+        train_periods = [
+            (start_test - timedelta(days=self.train_days), start_test - timedelta(days=1))
+            for start_test, _ in test_periods
+        ]
+
+        return dict(zip(train_periods, test_periods))
+
 
     def _get_experiment_interval(self):
         start = self.historical_data['date'][0] + \
             pd.Timedelta(days=self.skip_days)
         end = self.historical_data['date'][-1]
-
         return start, end

@@ -1,6 +1,6 @@
 from data.fetch_data import get_historical_crypto_data
 from metrics.experiment import Experiment
-from hyperopt import hp
+from hyperopt import hp, Trials
 import time
 
 
@@ -8,13 +8,17 @@ if __name__ == "__main__":
 
     start_time = time.time()
     historical_data = get_historical_crypto_data(
-        "2000-02-01", "2026-12-25", "Open")
+        "2000-02-01", "2028-12-25", "Open")
+
+    print(historical_data)
     space_params = {
-        'buy_thresholds': [hp.uniform(f'buy_thresholds_{i}', 0.5, 3) for i in range(5)],
-        'buy_percentages': [hp.uniform(f'buy_percentages_{i}', 0.0, 1.0) for i in range(5)],
-        'days_moving_avg': hp.quniform('days_moving_avg', 20, 300, 1),
+        'days_moving_avg': hp.quniform('days_moving_avg', 5, 300, 1),
+        'threshold': hp.uniform('threshold', 0.5, 3),
+        'buy_factor': hp.uniform('buy_factor', 0.0, 5.0),
+        'sell_factor': hp.uniform('sell_factor', 0.0, 5.0),
+    
     }
-    exp = Experiment(historical_data, retrain_freq=10, max_evals=30, skip_days=300)
+    exp = Experiment(historical_data,retrain_freq=30, train_days=150, skip_days=300, max_evals=250)
     results = exp.run(space_params)
 
     end_time = time.time()
