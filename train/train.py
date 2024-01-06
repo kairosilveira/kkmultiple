@@ -1,35 +1,56 @@
 from hyperopt import fmin, tpe
 from multiple.kkmultiple import KKMultiple
-from metrics.crypto_accumulator import CryptoAccumulator
+from metrics.cumulative_return import CumulativeReturn
 from functools import partial
+from typing import Dict, Union
+from datetime import datetime
+import polars as pl
 
 
-def objective(params, historical_data, train_period):
-    days_moving_avg = params['days_moving_avg']
-    buy_thresholds = sorted(params['buy_thresholds'])
-    buy_percentages = params['buy_percentages']
-    buy_params = dict(zip(buy_thresholds, buy_percentages))
-    kkmult = KKMultiple(days_moving_avg, buy_params)
-    metric_calculator = CryptoAccumulator(
-        historical_data=historical_data, eval_period=train_period, kkmult=kkmult)
-    crypto_accumulated = metric_calculator.get_accumulated_value()
-    return -crypto_accumulated.amount_accumulated
+def objective(params: Dict[str, Union[float, int]], historical_data: pl.DataFrame, 
+              start_train_period: datetime, end_train_period: datetime) -> float:
+    """
+    Objective function for hyperparameter optimization using Hyperopt.
+
+    Args:
+    - params (Dict[str, Union[float, int]]): Hyperparameters for KKMultiple class.
+    - historical_data (pl.DataFrame): DataFrame containing historical data.
+    - start_train_period (datetime): Start date for training period.
+    - end_train_period (datetime): End date for training period.
+
+    Returns:
+    - float: Negative of the total fiat value after trading for optimization.
+    """
+    params['days_moving_avg'] = int(params['days_moving_avg'])
+    kkmult = KKMultiple(**params)
+    trading_data = kkmult.get_trade_signals_df(
+        historical_data, start_train_period, end_train_period)
+    cum_return = CumulativeReturn(trading_data)
+    result = cum_return.calculate()
+    return -result.total_in_fiat
 
 
-def train(space_params, historical_data, train_period, max_evals):
+def train(space_params: Dict[str, float], historical_data: pl.DataFrame, 
+          start_train_period: datetime, end_train_period: datetime, max_evals: int) -> Dict[str, Union[dict, float, int]]:
+    """
+    Train function for hyperparameter optimization using Hyperopt.
+
+    Args:
+    - space_params (Dict[str, Union[dict, float, int]]): Search space for hyperparameters.
+    - historical_data (pl.DataFrame): DataFrame containing historical data.
+    - start_train_period (datetime): Start date for training period.
+    - end_train_period (datetime): End date for training period.
+    - max_evals (int): Maximum number of evaluations for Hyperopt.
+
+    Returns:
+    - Dict[str, Union[dict, float, int]]: Best hyperparameters found during optimization.
+    """
     best = fmin(
-        fn=partial(objective, historical_data=historical_data,
-                   train_period=train_period),
+        fn=partial(objective,
+                   historical_data=historical_data,
+                   start_train_period=start_train_period,
+                   end_train_period=end_train_period),
         space=space_params,
         algo=tpe.suggest,
         max_evals=max_evals)
-
-    buy_thresholds = sorted(list(best.values())[:-1])
-    buy_percentages = space_params['buy_percentages']
-    buy_params = dict(zip(buy_thresholds, buy_percentages))
-
-    best_formated = {
-        'days_moving_avg': best['days_moving_avg'],
-        'buy_params': buy_params
-    }
-    return best_formated
+    return best

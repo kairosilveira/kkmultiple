@@ -8,17 +8,22 @@ if __name__ == "__main__":
 
     start_time = time.time()
     historical_data = get_historical_crypto_data(
-        "2000-02-01", "2026-12-25", "Open")
+        "2000-02-01", "2028-12-25", "Open")
+
+    print(historical_data)
     space_params = {
-        'buy_thresholds': [hp.uniform(f'buy_thresholds_{i}', 0.5, 3) for i in range(5)],
-        'buy_percentages': [1, 0.8, 0.6, 0.4, 0.2],
-        'days_moving_avg': hp.quniform('days_moving_avg', 20, 3, 1),
+        'days_moving_avg': hp.quniform('days_moving_avg', 5, 300, 1),
+        'threshold': hp.uniform('threshold', 0.5, 3),
+        'buy_factor': hp.uniform('buy_factor', 0.0, 5.0),
+        'sell_factor': hp.uniform('sell_factor', 0.0, 5.0),
+
     }
-    exp = Experiment(historical_data, retrain_freq=1000, max_evals=3)
+    exp = Experiment(historical_data, retrain_freq=30,
+                     train_days=180, skip_days=300, max_evals=10)
     results = exp.run(space_params)
 
     end_time = time.time()
     elapsed_time = end_time - start_time
 
-    print(f"Elapsed Time: {elapsed_time} seconds")
+    print(f"Training Time: {elapsed_time} seconds")
     print(results)
