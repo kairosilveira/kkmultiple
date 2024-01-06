@@ -2,8 +2,6 @@ import pytest
 import polars as pl
 from datetime import datetime
 from multiple.kkmultiple import KKMultiple
-from metrics.crypto_accumulator import CryptoAccumulator
-from functools import namedtuple
 
 
 @pytest.fixture

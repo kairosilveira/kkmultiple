@@ -25,9 +25,8 @@ def test_validate_params_invalid_param_types():
         KKMultiple(days_moving_avg=10, threshold='invalid',
                    buy_factor=0.2, sell_factor=2.0)
 
+
 # TESTS METHODS
-
-
 def test_calculate_avg(sample_historical_data, sample_kkmultiple):
     result = sample_kkmultiple.calculate_avg(sample_historical_data)
 
@@ -72,9 +71,8 @@ def test__get_multiples_col(sample_historical_data, sample_kkmultiple, sample_ev
     sample_kkmultiple._get_trade_period_df(
         sample_historical_data, start_date, end_date)
     multiples = sample_kkmultiple._get_multiples_col(sample_historical_data)
-
     mult_dict = multiples.to_dict()
-    print(mult_dict)
+
     assert isinstance(multiples, pl.DataFrame)
     assert pl.Float64 in multiples.dtypes
     assert multiples.shape == (2, 1)

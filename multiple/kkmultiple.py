@@ -4,6 +4,23 @@ from datetime import datetime
 
 
 class KKMultiple:
+    """
+    KKMultiple class for implementing a trading strategy based on moving averages.
+
+    Args:
+    - days_moving_avg (int): Number of days for calculating the moving average.
+    - threshold (float): Threshold value for making trading decisions.
+    - buy_factor (float, optional): Buy factor multiplier (default is 0.5).
+    - sell_factor (float, optional): Sell factor multiplier (default is 2.0).
+
+    Attributes:
+    - days_moving_avg (int): Number of days for calculating the moving average.
+    - threshold (float): Threshold value for making trading decisions.
+    - buy_factor (float): Buy factor multiplier.
+    - sell_factor (float): Sell factor multiplier.
+    - multiple (float): Stored multiple after calculation.
+    - trade_period (polars.DataFrame): DataFrame containing the training data within a specified period.
+    """
 
     def __init__(self, days_moving_avg: int, threshold: float, buy_factor: float = 0.5, sell_factor: float = 2.0) -> None:
         self._validate_params(days_moving_avg, threshold,
@@ -17,6 +34,18 @@ class KKMultiple:
         self.trade_period = None
 
     def _validate_params(self, days_moving_avg: int, threshold: float, buy_factor: float, sell_factor: float):
+        """
+        Validates the input parameters during initialization.
+
+        Args:
+        - days_moving_avg (int): Number of days for calculating the moving average.
+        - threshold (float): Threshold value for making trading decisions.
+        - buy_factor (float): Buy factor multiplier.
+        - sell_factor (float): Sell factor multiplier.
+
+        Raises:
+        - ValueError: If parameters are not valid according to specified conditions.
+        """
         error = ValueError(
             "days_moving_avg should be an integer greater than or equal to 1. days_moving_avg={}".format(days_moving_avg))
         if not (isinstance(days_moving_avg, int) or
@@ -94,8 +123,22 @@ class KKMultiple:
         else:
             return 'none'
 
-    def get_trade_signals_df(self, historical_data, start_date, end_date, include_multiple=False, mayer=False):
+    def get_trade_signals_df(self, historical_data: pl.DataFrame,
+                             start_date: str | datetime, end_date: str | datetime,
+                             include_multiple: bool = False, mayer: bool = False):
+        """
+        Generates a DataFrame with trade signals based on the trading strategy.
 
+        Args:
+        - historical_data (pl.DataFrame): DataFrame containing historical data.
+        - start_date (str | datetime): Start date for the trading period.
+        - end_date (str | datetime): End date for the trading period.
+        - include_multiple (bool, optional): Flag to include the calculated multiples in the output DataFrame (default is False).
+        - mayer (bool, optional): Flag indicating whether to use Mayer's method for calculating multiples (default is False).
+
+        Returns:
+        - pl.DataFrame: DataFrame with trade signals and optionally calculated multiples.
+        """
         if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, '%Y-%m-%d')
             end_date = datetime.strptime(end_date, '%Y-%m-%d')
@@ -110,8 +153,19 @@ class KKMultiple:
         else:
             return pl.concat([trade_period, multiples, actions_col], how='horizontal')
 
-    def _get_actions_col(self, historical_data, mayer=False, multiples_col=None):
+    def _get_actions_col(self, historical_data: pl.DataFrame, mayer: bool = False,
+                         multiples_col: Optional[pl.DataFrame] = None) -> pl.DataFrame:
+        """
+        Gets a DataFrame column with trading actions.
 
+        Args:
+        - historical_data (pl.DataFrame): DataFrame containing historical data.
+        - mayer (bool, optional): Flag indicating whether to use Mayer's method for calculating multiples (default is False).
+        - multiples_col (pl.DataFrame, optional): DataFrame column with calculated multiples (default is None).
+
+        Returns:
+        - pl.DataFrame: DataFrame column with trading actions.
+        """
         if multiples_col is None:
             multiples_col = self._get_multiples_col(historical_data, mayer)
         return multiples_col.map_rows(
@@ -119,17 +173,17 @@ class KKMultiple:
             return_dtype=pl.Utf8
         ).rename({"map": "action"})
 
-    def _get_multiples_col(self, historical_data, mayer=False) -> pl.DataFrame:
+    def _get_multiples_col(self, historical_data: pl.DataFrame, mayer: bool = False) -> pl.DataFrame:
         """
-        Get the multiples calculated based on the provided strategy.
+        Gets a DataFrame column with calculated multiples.
 
         Args:
-        - mayer (bool): If True, calculate multiples using Mayer's method.
+        - historical_data (pl.DataFrame): DataFrame containing historical data.
+        - mayer (bool, optional): Flag indicating whether to use Mayer's method for calculating multiples (default is False).
 
         Returns:
-        polars.DataFrame: DataFrame containing the calculated multiples.
+        - pl.DataFrame: DataFrame column with calculated multiples.
         """
-
         if self.trade_period is None:
             raise ValueError(
                 "Call '_get_trade_period_df' before running this method")
@@ -143,12 +197,18 @@ class KKMultiple:
             return_dtype=pl.Float64
         ).rename({"map": "multiple"})
 
-    def _get_trade_period_df(self, historical_data, start_date, end_date) -> pl.DataFrame:
+    def _get_trade_period_df(self, historical_data: pl.DataFrame, start_date: str,
+                             end_date: str) -> pl.DataFrame:
         """
-        Get the training data within the specified period.
+        Gets a DataFrame containing the training data within a specified period.
+
+        Args:
+        - historical_data (pl.DataFrame): DataFrame containing historical data.
+        - start_date (str): Start date for the training period.
+        - end_date (str): End date for the training period.
 
         Returns:
-        polars.DataFrame: DataFrame containing the training data.
+        - pl.DataFrame: DataFrame containing the training data.
         """
         self.trade_period = historical_data.filter(
             (pl.col("date") >= start_date) & (pl.col("date") <= end_date))

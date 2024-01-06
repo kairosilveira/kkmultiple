@@ -1,6 +1,6 @@
 from data.fetch_data import get_historical_crypto_data
 from metrics.experiment import Experiment
-from hyperopt import hp, Trials
+from hyperopt import hp
 import time
 
 
@@ -16,9 +16,10 @@ if __name__ == "__main__":
         'threshold': hp.uniform('threshold', 0.5, 3),
         'buy_factor': hp.uniform('buy_factor', 0.0, 5.0),
         'sell_factor': hp.uniform('sell_factor', 0.0, 5.0),
-    
+
     }
-    exp = Experiment(historical_data,retrain_freq=30, train_days=150, skip_days=300, max_evals=250)
+    exp = Experiment(historical_data, retrain_freq=30,
+                     train_days=180, skip_days=300, max_evals=10)
     results = exp.run(space_params)
 
     end_time = time.time()
