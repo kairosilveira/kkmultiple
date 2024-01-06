@@ -10,7 +10,7 @@ def test_calculate(sample_historical_data, sample_kkmultiple):
 
     cum_return = CumulativeReturn(trading_data)
     result = cum_return.calculate()
-    
+
     assert isinstance(result.total_in_fiat, float)
     assert result.total_in_fiat == (1000/100)*200/120*120
 

@@ -21,7 +21,7 @@ class Experiment:
             ['kk', 'mayer']
         )
 
-        kkresult = self.kkmultiple_strategy(space_params )
+        kkresult = self.kkmultiple_strategy(space_params)
         # mayer is not implemented yet
         # mayer_result = self.get_method_result(method='mayer')
         mayer_result = 0
@@ -37,7 +37,6 @@ class Experiment:
         for train_period in train_test_periods_dict:
             start_train, end_train = train_period
             start_test, end_test = train_test_periods_dict[train_period]
-
             best_params = train(
                 space_params, self.historical_data, start_train, end_train, self.max_evals)
             kk = KKMultiple(**best_params)
@@ -47,13 +46,10 @@ class Experiment:
             result = cum_return.calculate(fiat, crypto)
             fiat = result.fiat
             crypto = result.crypto
-    
 
         last_price = self.historical_data.filter(
             pl.col('date') == end_test
         )['price'][0]
-
-        
 
         return fiat + last_price*crypto
 
@@ -64,17 +60,18 @@ class Experiment:
         test_periods = []
         while start_test_date + timedelta(days=self.retrain_freq - 1) <= end_date:
             test_periods.append(
-                (start_test_date, start_test_date + timedelta(days=self.retrain_freq - 1))
+                (start_test_date, start_test_date +
+                 timedelta(days=self.retrain_freq - 1))
             )
             start_test_date += timedelta(days=self.retrain_freq)
 
         train_periods = [
-            (start_test - timedelta(days=self.train_days), start_test - timedelta(days=1))
+            (start_test - timedelta(days=self.train_days),
+             start_test - timedelta(days=1))
             for start_test, _ in test_periods
         ]
 
         return dict(zip(train_periods, test_periods))
-
 
     def _get_experiment_interval(self):
         start = self.historical_data['date'][0] + \

@@ -1,20 +1,18 @@
-# from metrics.experiment import Experiment
-# from unittest.mock import patch
-# from datetime import datetime
-# from typing import Tuple
-# from datetime import datetime as dt
-# from hyperopt import hp
-# from metrics.crypto_accumulator import CryptoAccumulator
+from metrics.experiment import Experiment
+from unittest.mock import patch
+from datetime import datetime
+from datetime import datetime as dt
+from hyperopt import hp
 
 
-# def test_get_experiment_interval(sample_historical_data):
-#     exp = Experiment(sample_historical_data, skip_days=2, retrain_freq=2)
-#     start_date, end_date = exp._get_experiment_interval()
+def test_get_experiment_interval(sample_historical_data):
+    exp = Experiment(sample_historical_data, skip_days=2, train_days=2,retrain_freq=2)
+    start_date, end_date = exp._get_experiment_interval()
 
-#     assert isinstance(start_date, datetime)
-#     assert isinstance(end_date, datetime)
-#     assert start_date == dt.strptime('2022-12-27', '%Y-%m-%d')
-#     assert end_date == dt.strptime('2023-01-04', '%Y-%m-%d')
+    assert isinstance(start_date, datetime)
+    assert isinstance(end_date, datetime)
+    assert start_date == dt.strptime('2022-12-25', '%Y-%m-%d')
+    assert end_date == dt.strptime('2023-01-04', '%Y-%m-%d')
 
 
 # def test__get_train_test_dates(sample_historical_data):
@@ -95,7 +93,6 @@
 #         result1 = exp1.kk_strategy(space_params={})
 #         result2 = exp2.kk_strategy(space_params={})
 
-#     assert isinstance(result1, tuple)
 #     assert result1.amount_accumulated == expected_accumulated1
 #     assert result1.remaining_budget == expected_remaining_budget1
 #     assert result2.amount_accumulated == expected_accumulated2
