@@ -5,9 +5,10 @@ from functools import partial
 from typing import Dict, Union
 from datetime import datetime
 import polars as pl
+import numpy as np
 
 
-def objective(params: Dict[str, Union[float, int]], historical_data: pl.DataFrame, 
+def objective(params: Dict[str, Union[float, int]], historical_data: pl.DataFrame,
               start_train_period: datetime, end_train_period: datetime) -> float:
     """
     Objective function for hyperparameter optimization using Hyperopt.
@@ -30,7 +31,7 @@ def objective(params: Dict[str, Union[float, int]], historical_data: pl.DataFram
     return -result.total_in_fiat
 
 
-def train(space_params: Dict[str, float], historical_data: pl.DataFrame, 
+def train(space_params: Dict[str, float], historical_data: pl.DataFrame,
           start_train_period: datetime, end_train_period: datetime, max_evals: int) -> Dict[str, Union[dict, float, int]]:
     """
     Train function for hyperparameter optimization using Hyperopt.
@@ -45,6 +46,7 @@ def train(space_params: Dict[str, float], historical_data: pl.DataFrame,
     Returns:
     - Dict[str, Union[dict, float, int]]: Best hyperparameters found during optimization.
     """
+    rstate = np.random.default_rng(42)
     best = fmin(
         fn=partial(objective,
                    historical_data=historical_data,
@@ -52,5 +54,7 @@ def train(space_params: Dict[str, float], historical_data: pl.DataFrame,
                    end_train_period=end_train_period),
         space=space_params,
         algo=tpe.suggest,
-        max_evals=max_evals)
+        max_evals=max_evals,
+        show_progressbar=False,
+        rstate=rstate)
     return best
