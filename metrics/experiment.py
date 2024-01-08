@@ -22,12 +22,30 @@ class Experiment:
         )
 
         kkresult = self.kkmultiple_strategy(space_params)
-        # mayer is not implemented yet
-        # mayer_result = self.get_method_result(method='mayer')
-        mayer_result = 0
+        mayer_result = self.mayers_strategy()
         return ExperimentResult(kk=kkresult,
                                 mayer=mayer_result
                                 )
+
+    def mayers_strategy(self, initial_fiat=1000):
+        start_date, end_date = self._get_experiment_interval()
+        start_date = start_date + timedelta(days=self.train_days)
+
+        fiat = initial_fiat
+        crypto = 0.0
+        mayers = KKMultiple(days_moving_avg=200,threshold=2.4, sell_factor=1, buy_factor=1)
+        trading_data = mayers.get_trade_signals_df(
+                self.historical_data, start_date, end_date)
+        cum_return = CumulativeReturn(trading_data)
+        result = cum_return.calculate(fiat, crypto)
+        fiat = result.fiat
+        crypto = result.crypto
+        last_price = self.historical_data.filter(
+            pl.col('date') == end_date
+        )['price'][0]
+
+        return fiat + last_price*crypto
+
 
     def kkmultiple_strategy(self, space_params, initial_fiat=1000):
         train_test_periods_dict = self._get_train_test_dict()

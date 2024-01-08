@@ -15,6 +15,11 @@ def test_get_experiment_interval(sample_historical_data):
     assert start_date == dt.strptime('2022-12-25', '%Y-%m-%d')
     assert end_date == dt.strptime('2023-01-04', '%Y-%m-%d')
 
+def test_mayers_strategy(sample_historical_data):
+    exp1 = Experiment(sample_historical_data, skip_days=10, train_days=2)
+    exp2 = Experiment(sample_historical_data, skip_days=2, train_days=2)
+    assert exp1.mayers_strategy() == 650
+    assert exp2.mayers_strategy() == 1300
 
 def date(date_str1, date_str2):
     return dt.strptime(date_str1, '%Y-%m-%d'), dt.strptime(date_str2, '%Y-%m-%d')
