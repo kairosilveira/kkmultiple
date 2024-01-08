@@ -7,7 +7,6 @@ from datetime import datetime
 import polars as pl
 import numpy as np
 
-
 def objective(params: Dict[str, Union[float, int]], historical_data: pl.DataFrame,
               start_train_period: datetime, end_train_period: datetime) -> float:
     """
